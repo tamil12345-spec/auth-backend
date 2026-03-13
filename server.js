@@ -12,6 +12,7 @@ const PORT = process.env.PORT || 5000;
 // Allowed origins
 const allowedOrigins = [
   'https://strong-bonbon-2772bc.netlify.app',
+  'http://localhost:3000',
   process.env.FRONTEND_URL,
 ].filter(Boolean);
 
@@ -56,7 +57,8 @@ mongoose
       // Keep Render free tier awake — ping every 14 minutes
       if (process.env.NODE_ENV === 'production') {
         setInterval(() => {
-          const url = process.env.RENDER_EXTERNAL_URL || `https://strong-bonbon-2772bc.netlify.app`;
+          // FIX: Ping the backend URL, not the frontend Netlify URL
+          const url = process.env.RENDER_EXTERNAL_URL || 'https://auth-backend-m2zb.onrender.com';
           https.get(`${url}/api/health`, (res) => {
             console.log(`Keep-alive ping: ${res.statusCode}`);
           }).on('error', (err) => {
