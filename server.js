@@ -33,6 +33,12 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
 // Routes
+// Add this BEFORE your routes
+app.use((req, res, next) => {
+  console.log(`${req.method} ${req.path}`);
+  next();
+});
+
 app.use('/api/auth', authRoutes);
 
 // Health check
