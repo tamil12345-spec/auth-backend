@@ -1,31 +1,7 @@
+// backend/utils/sendEmail.js — Resend only, all Gmail removed
 const { Resend } = require('resend');
-const nodemailer = require('nodemailer');
 
-const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 465,
-  secure: true,          // true for port 465
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-});
 const resend = new Resend(process.env.RESEND_API_KEY);
-
-async function sendEmail(to, template, data) {
-  const { subject, html } = templates[template](data.name, data.resetUrl);
-  await resend.emails.send({
-    from: 'Auth App <onboarding@resend.dev>',
-    to,
-    subject,
-    html,
-  });
-}
-// Verify on startup
-transporter.verify((err) => {
-  if (err) console.error('❌ Mail error:', err.message);
-  else     console.log('✅ Mail transporter ready');
-});
 
 // ── Email templates ───────────────────────────────────────────
 const templates = {
@@ -72,19 +48,27 @@ const templates = {
 };
 
 /**
- * Send an email.
+ * Send an email using Resend.
  * @param {string} to - recipient email
  * @param {'resetPassword'|'welcomeEmail'} template - template key
  * @param {object} data - template data { name, resetUrl? }
  */
 async function sendEmail(to, template, data) {
   const { subject, html } = templates[template](data.name, data.resetUrl);
-  await transporter.sendMail({
-    from: `"Auth App" <${process.env.EMAIL_USER}>`,
+
+  const { error } = await resend.emails.send({
+    from: 'Auth App <onboarding@resend.dev>',
     to,
     subject,
     html,
   });
+
+  if (error) {
+    console.error('❌ Resend error:', error.message);
+    throw new Error(error.message);
+  }
+
+  console.log('✅ Email sent to:', to);
 }
 
 module.exports = sendEmail;

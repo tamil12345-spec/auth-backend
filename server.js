@@ -7,7 +7,7 @@ const authRoutes = require('./routes/auth');
 const { errorHandler } = require('./middleware/index');
 
 const app  = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 4000;
 
 // Allowed origins
 const allowedOrigins = [
@@ -33,12 +33,6 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
 // Routes
-// Add this BEFORE your routes
-app.use((req, res, next) => {
-  console.log(`${req.method} ${req.path}`);
-  next();
-});
-
 app.use('/api/auth', authRoutes);
 
 // Health check
@@ -57,20 +51,31 @@ mongoose
   .connect(process.env.MONGO_URI)
   .then(() => {
     console.log('✅ MongoDB connected');
-    app.listen(PORT, () => {
+
+    const server = app.listen(PORT, () => {
       console.log(`🚀 Server running on http://localhost:${PORT}`);
 
       // Keep Render free tier awake — ping every 14 minutes
       if (process.env.NODE_ENV === 'production') {
         setInterval(() => {
-          // FIX: Ping the backend URL, not the frontend Netlify URL
           const url = process.env.RENDER_EXTERNAL_URL || 'https://auth-backend-m2zb.onrender.com';
           https.get(`${url}/api/health`, (res) => {
             console.log(`Keep-alive ping: ${res.statusCode}`);
           }).on('error', (err) => {
             console.log('Keep-alive error:', err.message);
           });
-        }, 14 * 60 * 1000); // every 14 minutes
+        }, 14 * 60 * 1000);
+      }
+    });
+
+    // Auto-handle port in use error
+    server.on('error', (err) => {
+      if (err.code === 'EADDRINUSE') {
+        console.error(`❌ Port ${PORT} is already in use.`);
+        console.error(`👉 Run this to fix it: npx kill-port ${PORT} && npm run dev`);
+        process.exit(1);
+      } else {
+        throw err;
       }
     });
   })
