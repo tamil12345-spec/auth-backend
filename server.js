@@ -54,7 +54,7 @@ mongoose
       // Keep Render free tier awake — ping every 14 minutes
       if (process.env.NODE_ENV === 'production') {
         setInterval(() => {
-          const url = process.env.RENDER_EXTERNAL_URL || `https://depoly-backend-qyda.onrender.com`;
+          const url = process.env.RENDER_EXTERNAL_URL || `https://strong-bonbon-2772bc.netlify.app`;
           https.get(`${url}/api/health`, (res) => {
             console.log(`Keep-alive ping: ${res.statusCode}`);
           }).on('error', (err) => {
