@@ -1,14 +1,26 @@
-// backend/utils/sendEmail.js
+const { Resend } = require('resend');
 const nodemailer = require('nodemailer');
 
 const transporter = nodemailer.createTransport({
-  service: 'gmail',
+  host: 'smtp.gmail.com',
+  port: 465,
+  secure: true,          // true for port 465
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
   },
 });
+const resend = new Resend(process.env.RESEND_API_KEY);
 
+async function sendEmail(to, template, data) {
+  const { subject, html } = templates[template](data.name, data.resetUrl);
+  await resend.emails.send({
+    from: 'Auth App <onboarding@resend.dev>',
+    to,
+    subject,
+    html,
+  });
+}
 // Verify on startup
 transporter.verify((err) => {
   if (err) console.error('❌ Mail error:', err.message);
