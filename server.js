@@ -35,7 +35,9 @@ app.use(express.urlencoded({ extended: false }));
 app.use('/api/auth', authRoutes);
 
 // Health check
-app.get('/api/health', (_, res) => res.json({ status: 'ok', time: new Date() }));
+app.get('/api/health', (req, res) => {
+  res.status(200).json({ status: 'ok' });
+});
 
 // 404
 app.use((req, res) => res.status(404).json({ success: false, error: 'Route not found.' }));
