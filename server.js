@@ -7,6 +7,8 @@ const authRoutes = require('./routes/auth');
 const { errorHandler } = require('./middleware/index');
 
 const app  = express();
+app.set('trust proxy', 1); // ← Required for Render (reverse proxy / rate-limit fix)
+
 const PORT = process.env.PORT || 4000;
 
 // Allowed origins

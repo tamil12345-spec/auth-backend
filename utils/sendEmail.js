@@ -1,19 +1,14 @@
 // backend/utils/sendEmail.js
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.MAIL_USER,  // your Gmail address
-    pass: process.env.MAIL_PASS,  // Gmail App Password (16 chars)
-  },
-});
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 // Verify on startup
-transporter.verify((err) => {
-  if (err) console.error('❌ Gmail error:', err.message);
-  else     console.log('✅ Gmail transporter ready');
-});
+if (!process.env.RESEND_API_KEY) {
+  console.error('❌ Resend error: RESEND_API_KEY is missing in environment variables');
+} else {
+  console.log('✅ Resend transporter ready');
+}
 
 // ── Email templates ───────────────────────────────────────────
 const templates = {
@@ -60,7 +55,7 @@ const templates = {
 };
 
 /**
- * Send an email using Gmail SMTP.
+ * Send an email using Resend.
  * @param {string} to - recipient email
  * @param {'resetPassword'|'welcomeEmail'} template - template key
  * @param {object} data - template data { name, resetUrl? }
@@ -68,12 +63,14 @@ const templates = {
 async function sendEmail(to, template, data) {
   const { subject, html } = templates[template](data.name, data.resetUrl);
 
-  await transporter.sendMail({
-    from: `"Auth App" <${process.env.MAIL_USER}>`,
+  const { error } = await resend.emails.send({
+    from: 'Auth App <onboarding@resend.dev>', // free default — no domain needed
     to,
     subject,
     html,
   });
+
+  if (error) throw new Error(error.message);
 
   console.log('✅ Email sent to:', to);
 }
