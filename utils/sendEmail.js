@@ -65,18 +65,18 @@ async function sendEmail(to, template, data) {
 
   // Without a verified domain, Resend only allows sending to your own email.
   // TEST_EMAIL overrides the recipient in production.
-  const recipient = process.env.TEST_EMAIL || to;
+  // const recipient = process.env.TEST_EMAIL || to;
 
   const { error } = await resend.emails.send({
     from: 'Auth App <onboarding@resend.dev>',
-    to: recipient,
+    to,
     subject,
     html,
   });
 
   if (error) throw new Error(error.message);
 
-  console.log('✅ Email sent to:', recipient);
+  console.log('✅ Email sent to:', to);
 }
 
 module.exports = sendEmail;
