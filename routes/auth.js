@@ -141,6 +141,7 @@ router.post('/forgot-password', authLimiter, async (req, res, next) => {
       return res.status(500).json({ success: false, error: 'Email could not be sent. Try again.' });
     }
   } catch (err) {
+    console.log('Forgot password error:', err);
     next(err);
   }
 });

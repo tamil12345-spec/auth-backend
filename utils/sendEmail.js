@@ -1,14 +1,28 @@
 // backend/utils/sendEmail.js
-const { Resend } = require('resend');
+const nodemailer = require('nodemailer');
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+let transporter;
 
-// Verify on startup
-if (!process.env.RESEND_API_KEY) {
-  console.error('❌ Resend error: RESEND_API_KEY is missing in environment variables');
-} else {
-  console.log('✅ Resend transporter ready');
+// Create Ethereal test account on startup
+async function createTransporter() {
+  const testAccount = await nodemailer.createTestAccount();
+
+  transporter = nodemailer.createTransport({
+    host: 'smtp.ethereal.email',
+    port: 587,
+    secure: false,
+    auth: {
+      user: testAccount.user,
+      pass: testAccount.pass,
+    },
+  });
+
+  console.log('✅ Ethereal transporter ready');
+  console.log('📬 Ethereal login:', testAccount.user);
+  console.log('🔑 Ethereal pass:', testAccount.pass);
 }
+
+createTransporter();
 
 // ── Email templates ───────────────────────────────────────────
 const templates = {
@@ -55,7 +69,7 @@ const templates = {
 };
 
 /**
- * Send an email using Resend.
+ * Send an email using Ethereal (free fake SMTP).
  * @param {string} to - recipient email
  * @param {'resetPassword'|'welcomeEmail'} template - template key
  * @param {object} data - template data { name, resetUrl? }
@@ -63,16 +77,16 @@ const templates = {
 async function sendEmail(to, template, data) {
   const { subject, html } = templates[template](data.name, data.resetUrl);
 
-  const { error } = await resend.emails.send({
-    from: 'Auth App <onboarding@resend.dev>', // free default — no domain needed
+  const info = await transporter.sendMail({
+    from: '"Auth App" <no-reply@authapp.com>',
     to,
     subject,
     html,
   });
 
-  if (error) throw new Error(error.message);
-
+  // This URL lets you preview the email in browser
   console.log('✅ Email sent to:', to);
+  console.log('🔗 Preview URL:', nodemailer.getTestMessageUrl(info));
 }
 
 module.exports = sendEmail;
