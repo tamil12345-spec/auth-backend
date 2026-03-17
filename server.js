@@ -9,12 +9,12 @@ const { errorHandler } = require('./middleware/index');
 const app  = express();
 app.set('trust proxy', 1); // ← Required for Render (reverse proxy / rate-limit fix)
 
-const PORT = process.env.PORT || 4000;
+const PORT = process.env.PORT || 5000;
 
 // Allowed origins
 const allowedOrigins = [
-  'https://strong-bonbon-2772bc.netlify.app',
-  'http://localhost:3000',
+  'https://auth-frontend-m2zb.onrender.com',
+  
   process.env.FRONTEND_URL,
 ].filter(Boolean);
 
