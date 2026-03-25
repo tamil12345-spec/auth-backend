@@ -7,14 +7,14 @@ const authRoutes = require('./routes/auth');
 const { errorHandler } = require('./middleware/index');
 
 const app  = express();
-app.set('trust proxy', 1); // ← Required for Render (reverse proxy / rate-limit fix)
+app.set('trust proxy', 1);
 
 const PORT = process.env.PORT || 5000;
 
-// Allowed origins
 const allowedOrigins = [
   'https://strong-bonbon-2772bc.netlify.app',
-  
+  'http://localhost:5173',
+  'http://localhost:3000',
   process.env.FRONTEND_URL,
 ].filter(Boolean);
 
@@ -23,6 +23,7 @@ app.use(cors({
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
+      console.error('❌ CORS blocked origin:', origin); // ← helps debug
       callback(new Error('Not allowed by CORS'));
     }
   },
@@ -34,21 +35,15 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-// Routes
 app.use('/api/auth', authRoutes);
 
-// Health check
 app.get('/api/health', (req, res) => {
   res.status(200).json({ status: 'ok' });
 });
 
-// 404
 app.use((req, res) => res.status(404).json({ success: false, error: 'Route not found.' }));
-
-// Global error handler
 app.use(errorHandler);
 
-// MongoDB + Start server
 mongoose
   .connect(process.env.MONGO_URI)
   .then(() => {
@@ -57,24 +52,23 @@ mongoose
     const server = app.listen(PORT, () => {
       console.log(`🚀 Server running on http://localhost:${PORT}`);
 
-      // Keep Render free tier awake — ping every 14 minutes
       if (process.env.NODE_ENV === 'production') {
+        // ✅ Ping the backend itself, not the frontend
+        const backendUrl = process.env.RENDER_EXTERNAL_URL || 'https://auth-backend-m2zb.onrender.com';
         setInterval(() => {
-          const url = process.env.RENDER_EXTERNAL_URL || 'https://strong-bonbon-2772bc.netlify.app';
-          https.get(`${url}/api/health`, (res) => {
+          https.get(`${backendUrl}/api/health`, (res) => {
             console.log(`Keep-alive ping: ${res.statusCode}`);
           }).on('error', (err) => {
-            console.log('Keep-alive error:', err.message);
+            console.warn('Keep-alive error:', err.message);
           });
         }, 14 * 60 * 1000);
       }
     });
 
-    // Auto-handle port in use error
     server.on('error', (err) => {
       if (err.code === 'EADDRINUSE') {
         console.error(`❌ Port ${PORT} is already in use.`);
-        console.error(`👉 Run this to fix it: npx kill-port ${PORT} && npm run dev`);
+        console.error(`👉 Run: npx kill-port ${PORT} && npm run dev`);
         process.exit(1);
       } else {
         throw err;

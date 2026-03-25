@@ -1,27 +1,8 @@
 // backend/utils/sendEmail.js
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 
-// ── Brevo SMTP transporter ────────────────────────────────────
-const transporter = nodemailer.createTransport({
-  host:   process.env.EMAIL_HOST || 'smtp-relay.brevo.com',
-  port:   parseInt(process.env.EMAIL_PORT) || 587,
-  secure: false,   // false for port 587 (STARTTLS)
-  auth: {
-    user: process.env.EMAIL_USER,  // a52e33001@smtp-brevo.com
-    pass: process.env.EMAIL_PASS,  // your Brevo SMTP password
-  },
-  tls: {
-    rejectUnauthorized: false,
-  },
-});
+const resend = new Resend(process.env.RESEND_API_KEY);
 
-// ── Verify on startup ─────────────────────────────────────────
-transporter.verify((err) => {
-  if (err) console.error('❌ Mail transporter error:', err.message);
-  else     console.log('✅ Brevo SMTP ready');
-});
-
-// ── Email templates ───────────────────────────────────────────
 const templates = {
 
   resetPassword: (name, resetUrl) => ({
@@ -40,10 +21,8 @@ const templates = {
           <p style="margin:0 0 16px;font-size:15px;line-height:1.6;">
             Hi <strong>${name}</strong>,
           </p>
-          <p style="margin:0 0 24px;font-size:15px;
-                    line-height:1.6;color:#8891a4;">
-            We received a request to reset your password. Click the
-            button below — this link expires in
+          <p style="margin:0 0 24px;font-size:15px;line-height:1.6;color:#8891a4;">
+            Click below to reset your password — expires in
             <strong style="color:#dde1eb;">15 minutes</strong>.
           </p>
           <div style="text-align:center;margin:28px 0;">
@@ -56,11 +35,9 @@ const templates = {
             </a>
           </div>
           <p style="font-size:13px;color:#4b5465;word-break:break-all;">
-            Or copy this link:
-            <a href="${resetUrl}" style="color:#6366f1;">${resetUrl}</a>
+            Or copy: <a href="${resetUrl}" style="color:#6366f1;">${resetUrl}</a>
           </p>
-          <p style="margin:24px 0 0;font-size:12px;
-                    color:#4b5465;text-align:center;">
+          <p style="margin:24px 0 0;font-size:12px;color:#4b5465;text-align:center;">
             If you didn't request this, ignore this email.
           </p>
         </div>
@@ -82,8 +59,7 @@ const templates = {
         </div>
         <div style="padding:36px 40px;">
           <p style="font-size:15px;line-height:1.6;margin:0 0 16px;">
-            Hi <strong>${name}</strong>, your account has been
-            created successfully.
+            Hi <strong>${name}</strong>, your account is ready.
           </p>
           <p style="font-size:15px;line-height:1.6;color:#8891a4;margin:0;">
             You can now sign in and start using the app.
@@ -95,23 +71,23 @@ const templates = {
 
 };
 
-// ── Send email ────────────────────────────────────────────────
 async function sendEmail(to, template, data) {
   const { subject, html } = templates[template](data.name, data.resetUrl);
 
-  try {
-    const info = await transporter.sendMail({
-      from:    `"Auth App" <${process.env.EMAIL_FROM}>`,
-      to,
-      subject,
-      html,
-    });
-    console.log('✅ Email sent:', info.messageId);
-    return info;
-  } catch (err) {
-    console.error('❌ Email failed:', err.message);
-    throw new Error('Email could not be sent: ' + err.message);
+  const { data: result, error } = await resend.emails.send({
+    from: 'Auth App <onboarding@resend.dev>', // ← use this until you verify a domain
+    to,
+    subject,
+    html,
+  });
+
+  if (error) {
+    console.error('❌ Email failed:', error.message);
+    throw new Error('Email could not be sent: ' + error.message);
   }
+
+  console.log('✅ Email sent:', result.id);
+  return result;
 }
 
 module.exports = sendEmail;
