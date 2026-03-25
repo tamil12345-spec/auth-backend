@@ -83,12 +83,11 @@ async function sendEmail(to, template, data) {
   const { subject, html } = templates[template](data.name, data.resetUrl);
 
   const { data: result, error } = await resend.emails.send({
-    from: 'Auth App <onboarding@resend.dev>', // swap for noreply@yourdomain.com after domain verification
-    to,
-    subject,
-    html,
-  });
-
+  from: 'Auth App <onboarding@resend.dev>',
+  to: 'tamilarasi3086@gmail.com', // ← hardcode for now until domain verified
+  subject,
+  html,
+});
   if (error) {
     console.error('❌ Resend error:', error);
     throw new Error('Email could not be sent: ' + error.message);

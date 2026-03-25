@@ -15,6 +15,7 @@ const allowedOrigins = [
   'https://strong-bonbon-2772bc.netlify.app',
   'http://localhost:5173',
   'http://localhost:3000',
+  'http://localhost:3001',
   process.env.FRONTEND_URL,
 ].filter(Boolean);
 
