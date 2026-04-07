@@ -1,16 +1,4 @@
-// backend/utils/sendEmail.js
-const nodemailer = require('nodemailer');
-
-// ── Transporter ───────────────────────────────────────────────
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: Number(process.env.SMTP_PORT) || 587,
-  secure: process.env.SMTP_PORT === '465', // true for port 465, false for 587
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-});
+const fetch = require('node-fetch');
 
 // ── Email templates ───────────────────────────────────────────
 const templates = {
@@ -19,7 +7,7 @@ const templates = {
     if (!resetUrl) throw new Error('resetUrl is required for resetPassword template');
     return {
       subject: 'Reset your password',
-      html: `
+      htmlContent: `
         <div style="font-family:'Segoe UI',sans-serif;max-width:520px;
                     margin:auto;background:#0d1017;color:#dde1eb;
                     border-radius:16px;overflow:hidden;">
@@ -62,7 +50,7 @@ const templates = {
 
   welcomeEmail: ({ name }) => ({
     subject: 'Welcome! Your account is ready 🎉',
-    html: `
+    htmlContent: `
       <div style="font-family:'Segoe UI',sans-serif;max-width:520px;
                   margin:auto;background:#0d1017;color:#dde1eb;
                   border-radius:16px;overflow:hidden;">
@@ -86,27 +74,44 @@ const templates = {
 
 };
 
-// ── Send email ────────────────────────────────────────────────
+// ── Send via Brevo HTTP API ───────────────────────────────────
 async function sendEmail(to, template, data) {
-  if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
-    throw new Error('SMTP_USER or SMTP_PASS is not set in environment variables.');
+  if (!process.env.BREVO_API_KEY) {
+    throw new Error('BREVO_API_KEY is not set in environment variables.');
   }
 
   if (!templates[template]) {
     throw new Error(`Unknown email template: "${template}"`);
   }
 
-  const { subject, html } = templates[template](data);
+  const { subject, htmlContent } = templates[template](data);
 
-  const info = await transporter.sendMail({
-    from: `"${process.env.EMAIL_FROM_NAME ?? 'MyApp'}" <${process.env.EMAIL_FROM ?? process.env.SMTP_USER}>`,
-    to,
-    subject,
-    html,
+  const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+    method: 'POST',
+    headers: {
+      'Content-Type':  'application/json',
+      'api-key':       process.env.BREVO_API_KEY,
+    },
+    body: JSON.stringify({
+      sender: {
+        name:  process.env.EMAIL_FROM_NAME ?? 'MyApp',
+        email: process.env.EMAIL_FROM,
+      },
+      to: [{ email: to }],
+      subject,
+      htmlContent,
+    }),
   });
 
-  console.log('✅ Email sent:', info.messageId);
-  return info;
+  if (!response.ok) {
+    const err = await response.json();
+    console.error('❌ Brevo API error:', err);
+    throw new Error(err.message ?? 'Email could not be sent.');
+  }
+
+  const result = await response.json();
+  console.log('✅ Email sent via Brevo API:', result.messageId);
+  return result;
 }
 
 module.exports = sendEmail;
