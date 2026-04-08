@@ -183,4 +183,13 @@ router.post('/reset-password/:token', async (req, res, next) => {
   }
 });
 
+// ─────────────────────────────────────────────────────────────
+// DELETE /api/auth/nuke/:email
+// ⚠️  TEMPORARY — DELETE THIS ROUTE AFTER CLEARING THE STUCK USER
+// ─────────────────────────────────────────────────────────────
+router.delete('/nuke/:email', async (req, res) => {
+  const result = await User.deleteOne({ email: req.params.email.toLowerCase() });
+  res.json({ deleted: result.deletedCount === 1 });
+});
+
 module.exports = router;
