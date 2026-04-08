@@ -1,4 +1,5 @@
-const fetch = require('node-fetch');
+// backend/utils/sendEmail.js
+// Uses Brevo HTTP API (not SMTP) — works on Render free tier
 
 // ── Email templates ───────────────────────────────────────────
 const templates = {
@@ -76,21 +77,27 @@ const templates = {
 
 // ── Send via Brevo HTTP API ───────────────────────────────────
 async function sendEmail(to, template, data) {
+  // ── Guard: env vars ───────────────────────────────────────
   if (!process.env.BREVO_API_KEY) {
     throw new Error('BREVO_API_KEY is not set in environment variables.');
   }
+  if (!process.env.EMAIL_FROM) {
+    throw new Error('EMAIL_FROM is not set in environment variables.');
+  }
 
+  // ── Guard: template exists ────────────────────────────────
   if (!templates[template]) {
     throw new Error(`Unknown email template: "${template}"`);
   }
 
   const { subject, htmlContent } = templates[template](data);
 
+  // ── Send via Brevo REST API ───────────────────────────────
   const response = await fetch('https://api.brevo.com/v3/smtp/email', {
     method: 'POST',
     headers: {
-      'Content-Type':  'application/json',
-      'api-key':       process.env.BREVO_API_KEY,
+      'Content-Type': 'application/json',
+      'api-key':      process.env.BREVO_API_KEY,
     },
     body: JSON.stringify({
       sender: {
@@ -103,14 +110,15 @@ async function sendEmail(to, template, data) {
     }),
   });
 
+  // ── Handle Brevo errors ───────────────────────────────────
   if (!response.ok) {
-    const err = await response.json();
+    const err = await response.json().catch(() => ({}));
     console.error('❌ Brevo API error:', err);
-    throw new Error(err.message ?? 'Email could not be sent.');
+    throw new Error(err.message ?? `Brevo API responded with status ${response.status}`);
   }
 
   const result = await response.json();
-  console.log('✅ Email sent via Brevo API:', result.messageId);
+  console.log('✅ Email sent via Brevo API, messageId:', result.messageId);
   return result;
 }
 
